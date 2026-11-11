@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CanteenClock</title>
+<meta name="description" content="Live-looking crowd meter, today’s menu and best time to go for your campus canteen, mess and food court.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4;--surface:#FFFFFF;--ink:#141C26;--muted:#5B6878;--line:#D6DDE6;--accent:#2457F5;--accent-ink:#fff;
+  --l0:#1FA86A;--l1:#E3A91B;--l2:#EE7B22;--l3:#DE3B3B;--best:#2457F5;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0C1218;--surface:#151E28;--ink:#E7EDF5;--muted:#93A1B3;--line:#273445;--accent:#6F93FF;--accent-ink:#0A1230;--l0:#34CB86;--l1:#F1BC3A;--l2:#FF9340;--l3:#FF6262;--best:#6F93FF}
+}
+:root[data-theme="dark"]{--bg:#0C1218;--surface:#151E28;--ink:#E7EDF5;--muted:#93A1B3;--line:#273445;--accent:#6F93FF;--accent-ink:#0A1230;--l0:#34CB86;--l1:#F1BC3A;--l2:#FF9340;--l3:#FF6262;--best:#6F93FF}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.01em}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:18px 16px 56px}
+header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+h1{font-size:clamp(26px,5vw,36px)}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:2px 0 0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn,select{border:1px solid var(--line);background:var(--surface);padding:8px 12px;border-radius:9px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.venues{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.vt{padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700}
+.vt[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:14px;align-items:start;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.board{background:#0F1822;border-color:#0F1822;color:#FFC94D;font-family:"JetBrains Mono",ui-monospace,monospace}
+.board .lbl{color:#8FA1B8;font-size:12px;letter-spacing:.12em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+.live{display:inline-flex;align-items:center;gap:6px}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:#34CB86;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.gauge{position:relative;max-width:300px;margin:10px auto 0}
+.gauge svg{width:100%;display:block}
+.gauge .mid{position:absolute;left:0;right:0;bottom:2px;text-align:center}
+.gauge .pct{font-size:44px;font-weight:700;line-height:1}
+.gauge .state{font-size:15px;letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.trio div{background:#18242F;border-radius:10px;padding:8px 10px}
+.trio b{display:block;font-size:20px}.trio span{font-size:11px;color:#8FA1B8;letter-spacing:.06em;text-transform:uppercase}
+.rep{margin-top:14px;border-top:1px dashed #2A3948;padding-top:12px;color:#C9D4E2;font-family:"Space Grotesk",sans-serif}
+.rep p{margin:0 0 8px;font-size:14px}
+.rep .row{display:flex;gap:6px;flex-wrap:wrap}
+.rep button{background:#18242F;border:1px solid #2A3948;color:#E7EDF5;border-radius:8px;padding:6px 12px;cursor:pointer}
+.rep button:hover{border-color:#FFC94D}
+.chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px;cursor:pointer}
+.chk input{width:auto}
+.rec{background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:12px 14px;margin:10px 0 12px}
+.rec b{font-size:20px}
+.rec small{display:block;opacity:.9}
+.win{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:14px}
+.win input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px}
+.chart{overflow-x:auto}
+.chart svg{min-width:560px;width:100%;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:"JetBrains Mono",monospace}
+.l0{fill:var(--l0)}.l1{fill:var(--l1)}.l2{fill:var(--l2)}.l3{fill:var(--l3)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.mealtabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.mt{padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+.mt[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.item{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.dot{display:inline-block;width:12px;height:12px;border:2px solid var(--l0);border-radius:3px;position:relative;margin-right:8px;vertical-align:-1px}
+.dot::after{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--l0)}
+.dot.n{border-color:var(--l3)}.dot.n::after{background:var(--l3)}
+.price{font-family:"JetBrains Mono",monospace;font-weight:700}
+.note{color:var(--muted);padding:14px 2px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:20;max-width:90vw}
+.foot{color:var(--muted);font-size:13px;margin-top:18px}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Canteen<span>Clock</span></h1>
+      <p class="sub">Know the rush before you walk over. Crowd meter, menu and the best time to go.</p>
+    </div>
+    <div class="tools">
+      <label for="demo" class="sub">Time:</label>
+      <select id="demo" aria-label="Choose time of day"></select>
+      <button class="btn" id="theme">Switch theme</button>
+    </div>
+  </header>
+
+  <div class="venues" id="venues" role="tablist"></div>
+
+  <div class="cols">
+    <section class="card board" aria-label="Live crowd meter">
+      <div class="lbl"><span class="live" id="vname"></span><span id="clock"></span></div>
+      <div class="gauge">
+        <svg viewBox="0 0 200 110" aria-hidden="true">
+          <path d="M12 100 A88 88 0 0 1 188 100" fill="none" stroke="#223140" stroke-width="16" stroke-linecap="round" pathLength="100"/>
+          <path id="arc" d="M12 100 A88 88 0 0 1 188 100" fill="none" stroke="#34CB86" stroke-width="16" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+        </svg>
+        <div class="mid"><div class="pct" id="pct">0%</div><div class="state" id="state"></div></div>
+      </div>
+      <div class="trio">
+        <div><b id="wait">0</b><span>Min wait</span></div>
+        <div><b id="seats">0</b><span>Seats free</span></div>
+        <div><b id="trend">-</b><span>Next 15 min</span></div>
+      </div>
+      <div class="rep">
+        <p>Are you there? Tell others how it looks. <span id="rc"></span></p>
+        <div class="row">
+          <button data-rep="-1">Quiet</button><button data-rep="0">Okay</button><button data-rep="1">Packed</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="alert"> Tell me when it drops below 40%</label>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Best time to go">
+      <h2>Best time to go</h2>
+      <div class="rec" id="rec"></div>
+      <div class="win">My break:
+        <input type="time" id="ws" value="12:00" aria-label="Break starts">
+        <span>to</span>
+        <input type="time" id="we" value="14:00" aria-label="Break ends">
+      </div>
+      <div class="chart" id="chart"></div>
+      <div class="legend"><span><i style="background:var(--l0)"></i>Quiet</span><span><i style="background:var(--l1)"></i>Moderate</span><span><i style="background:var(--l2)"></i>Busy</span><span><i style="background:var(--l3)"></i>Packed</span><span><i style="background:none;border:2px solid var(--best)"></i>Best slot</span></div>
+    </section>
+  </div>
+
+  <section class="card" aria-label="Menu">
+    <h2 id="mh">Today’s menu</h2>
+    <div class="mealtabs" id="meals" role="tablist"></div>
+    <div class="menu" id="menu"></div>
+  </section>
+  <p class="foot">Crowd numbers are simulated from typical campus patterns plus reports from this device. Pick a time above to preview any hour.</p>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var V=[
+   {name:"Main Canteen",open:8,close:21,cap:220,peaks:[[10.5,32,.7],[13,88,.8],[17,48,.9]],menu:{
+     Breakfast:[["Aloo paratha with curd",40,"v"],["Poha",25,"v"],["Bread omelette",35,"n"],["Tea or coffee",12,"v"]],
+     Lunch:[["Rajma chawal",70,"v"],["Paneer butter masala, 2 roti",90,"v"],["Chicken curry rice",110,"n"],["Veg thali",80,"v"]],
+     Snacks:[["Samosa",15,"v"],["Veg sandwich",40,"v"],["Maggi",35,"v"],["Cold coffee",45,"v"]],
+     Dinner:[["Chole bhature",70,"v"],["Egg fried rice",70,"n"],["Dal tadka with rice",60,"v"],["Veg manchurian",75,"v"]]}},
+   {name:"Hostel Mess",open:7,close:22,cap:300,peaks:[[8,78,.6],[13.5,70,.8],[20,92,.9]],menu:{
+     Breakfast:[["Idli sambar",0,"v"],["Bread, butter and jam",0,"v"],["Boiled eggs",0,"n"],["Milk or tea",0,"v"]],
+     Lunch:[["Dal, rice and roti",0,"v"],["Seasonal sabzi",0,"v"],["Curd and salad",0,"v"],["Kadhi pakora",0,"v"]],
+     Snacks:[["Tea and biscuits",0,"v"],["Pakoda",0,"v"],["Fruit",0,"v"],["Milk",0,"v"]],
+     Dinner:[["Mixed veg and roti",0,"v"],["Dal fry and jeera rice",0,"v"],["Egg curry",0,"n"],["Kheer",0,"v"]]}},
+   {name:"Food Court",open:10,close:22,cap:180,peaks:[[12.5,70,.8],[16.5,55,.8],[19.5,68,.9]],menu:{
+     Lunch:[["Veg burger",99,"v"],["Chicken wrap",129,"n"],["Margherita pizza slice",79,"v"],["Hakka noodles",99,"v"]],
+     Snacks:[["French fries",70,"v"],["Veg momos",80,"v"],["Chicken momos",100,"n"],["Milkshake",90,"v"]],
+     Dinner:[["White sauce pasta",120,"v"],["Chicken biryani",130,"n"],["Paneer roll",90,"v"],["Brownie sundae",110,"v"]]}}
+  ];
+  var MEALS=["Breakfast","Lunch","Snacks","Dinner"];
+  var s={v:0,demo:"now",drift:0,reps:[],meal:null,prev:null,tt:0};
+  var KEY="canteenclock-v1";
+  try{var sv=JSON.parse(localStorage.getItem(KEY)||"null");if(sv&&sv.reps)s.reps=sv.reps.filter(function(r){return Date.now()-r.t<18e5})}catch(e){}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({reps:s.reps}))}catch(e){}}
+
+  function hnow(){if(s.demo!=="now")return +s.demo;var d=new Date();return d.getHours()+d.getMinutes()/60}
+  function fmt(h){var hh=Math.floor(h+1e-9),mm=Math.round((h-hh)*60);if(mm===60){hh++;mm=0}var ap=hh>=12&&hh<24?"PM":"AM",x=hh%12||12;return x+":"+(mm<10?"0":"")+mm+" "+ap}
+  function base(v,h){
+    if(h<v.open||h>=v.close)return 0;
+    var o=6,wk=[0,6].indexOf(new Date().getDay())>-1?.65:1;
+    v.peaks.forEach(function(p){o+=wk*p[1]*Math.exp(-Math.pow(h-p[0],2)/(2*p[2]*p[2]))});
+    return Math.max(3,Math.min(100,o));
+  }
+  function repAdj(){
+    var a=0,n=Date.now();
+    s.reps.forEach(function(r){var age=(n-r.t)/12e5;if(age<1&&r.v===s.v)a+=r.val*14*(1-age)});
+    return Math.max(-20,Math.min(20,a));
+  }
+  function occ(h,live){var b=base(V[s.v],h);if(!b)return 0;if(live)b+=s.drift+repAdj();return Math.max(2,Math.min(100,b))}
+  function lvl(p){return p<30?0:p<55?1:p<80?2:3}
+  var LN=["Quiet","Moderate","Busy","Packed"];
+  var LC=["var(--l0)","var(--l1)","var(--l2)","var(--l3)"];
+  function waitMin(p){return Math.round(Math.pow(p/100,1.6)*20)}
+
+  function renderGauge(){
+    var v=V[s.v],h=hnow(),p=occ(h,true);
+    $("vname").textContent=v.name+(s.demo==="now"?" · live":" · preview");
+    $("clock").textContent=fmt(h);
+    if(!p){
+      $("arc").setAttribute("stroke-dasharray","0 100");$("pct").textContent="--";$("state").textContent="Closed";
+      $("wait").textContent="-";$("seats").textContent="-";$("trend").textContent="-";
+      $("rc").textContent="Opens at "+fmt(v.open)+".";return;
+    }
+    p=Math.round(p);var l=lvl(p);
+    $("arc").setAttribute("stroke-dasharray",p+" 100");$("arc").setAttribute("stroke",["#34CB86","#F1BC3A","#FF9340","#FF6262"][l]);
+    $("pct").textContent=p+"%";$("state").textContent=LN[l];
+    $("wait").textContent=waitMin(p);$("seats").textContent=Math.max(0,Math.round(v.cap*(100-p)/100));
+    var nx=occ(h+.25,false),d=nx-base(v,h);
+    $("trend").textContent=!nx?"Closes":d>3?"Rising":d<-3?"Falling":"Steady";
+    var rc=s.reps.filter(function(r){return r.v===s.v&&Date.now()-r.t<12e5}).length;
+    $("rc").textContent=rc?rc+" report"+(rc>1?"s":"")+" in the last 20 min.":"";
+    if($("alert").checked&&s.prev!==null&&s.prev>=40&&p<40)ping(v.name+" is down to "+p+"% full. Good time to go!");
+    s.prev=p;
+  }
+
+  function bestIn(a,b){
+    var v=V[s.v],best=null;
+    for(var h=Math.max(a,v.open);h<=Math.min(b,v.close-.25)+1e-9;h+=.25){var p=base(v,h);if(best===null||p<best.p-.5)best={h:h,p:p}}
+    return best;
+  }
+  function parse(t){var x=(t||"").split(":");return x.length<2?NaN:+x[0]+ +x[1]/60}
+  function renderRec(){
+    var v=V[s.v],a=parse($("ws").value),b=parse($("we").value),r=$("rec");
+    if(isNaN(a)||isNaN(b)||b<=a){r.innerHTML="<b>Set your break</b><small>Choose a start time that is before the end time.</small>";return}
+    var best=bestIn(a,b);
+    if(!best){r.innerHTML="<b>Closed during your break</b><small>"+v.name+" is open "+fmt(v.open)+" to "+fmt(v.close)+".</small>";return}
+    var w=waitMin(best.p),now=base(v,hnow()),extra="";
+    if(now&&hnow()>=a&&hnow()<=b){var save=waitMin(now)-w;if(save>1)extra=" That saves about "+save+" min versus right now.";}
+    r.innerHTML="<b>Go at "+fmt(best.h)+"</b><small>About "+Math.round(best.p)+"% full, around "+w+" min wait."+extra+"</small>";
+  }
+
+  function renderChart(){
+    var v=V[s.v],n=(v.close-v.open)*2,W=700,H=210,L=8,B=26,T=10,bw=(W-L*2)/n,out="",a=parse($("ws").value),b=parse($("we").value),best=(!isNaN(a)&&!isNaN(b)&&b>a)?bestIn(a,b):null,h0=hnow();
+    for(var i=0;i<n;i++){
+      var h=v.open+i/2,p=Math.round(base(v,h)),bh=(H-B-T)*p/100,x=L+i*bw,y=H-B-bh;
+      var isBest=best&&Math.abs(Math.floor(best.h*2)/2-h)<.01;
+      out+='<rect class="l'+lvl(p)+'" x="'+(x+1.5).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bw-3).toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="3"'+(isBest?' stroke="var(--best)" stroke-width="3"':"")+'><title>'+fmt(h)+': about '+p+'% full, '+waitMin(p)+' min wait</title></rect>';
+      if(i%4===0)out+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+fmt(h).replace(":00","")+'</text>';
+    }
+    if(h0>=v.open&&h0<v.close){var mx=L+(h0-v.open)*2*bw;out+='<line x1="'+mx.toFixed(1)+'" x2="'+mx.toFixed(1)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--ink)" stroke-width="2" stroke-dasharray="4 3"/><text x="'+mx.toFixed(1)+'" y="'+(T+2)+'" text-anchor="'+(mx>W-60?"end":"start")+'" style="fill:var(--ink);font-weight:700"> now</text>'}
+    out+='<line x1="'+L+'" x2="'+(W-L)+'" y1="'+(H-B)+'" y2="'+(H-B)+'" stroke="var(--line)"/>';
+    $("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Forecast of crowd levels through the day for '+v.name+'">'+out+'</svg>';
+  }
+
+  function mealNow(h){return h<11?"Breakfast":h<16?"Lunch":h<18?"Snacks":"Dinner"}
+  function renderMenu(){
+    var v=V[s.v],m=s.meal||mealNow(hnow());
+    $("mh").textContent="Today’s menu · "+new Date().toLocaleDateString([], {weekday:"long"});
+    $("meals").innerHTML=MEALS.map(function(x){return '<button class="mt" role="tab" data-meal="'+x+'" aria-selected="'+(x===m)+'">'+x+'</button>'}).join("");
+    var items=v.menu[m];
+    $("menu").innerHTML=items?items.map(function(it){
+      return '<div class="item"><span><i class="dot'+(it[2]==="n"?" n":"")+'" title="'+(it[2]==="n"?"Non-veg":"Veg")+'"></i>'+it[0]+'</span><span class="price">'+(it[1]?"₹"+it[1]:"Mess plan")+'</span></div>';
+    }).join(""):'<div class="note">'+v.name+' doesn’t serve '+m.toLowerCase()+'. It opens at '+fmt(v.open)+'.</div>';
+  }
+
+  function renderAll(){renderGauge();renderRec();renderChart();renderMenu()}
+  function renderVenues(){
+    $("venues").innerHTML=V.map(function(v,i){return '<button class="vt" role="tab" data-v="'+i+'" aria-selected="'+(i===s.v)+'">'+v.name+'</button>'}).join("");
+  }
+  function toast(m){var t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(s.tt);s.tt=setTimeout(function(){t.hidden=true},3200)}
+  function ping(m){toast(m);try{if("Notification" in window&&Notification.permission==="granted")new Notification("CanteenClock",{body:m})}catch(e){}}
+
+  var opts='<option value="now">Right now</option>';
+  for(var h=7;h<=21;h++)opts+='<option value="'+h+'">'+fmt(h)+'</option>';
+  $("demo").innerHTML=opts;
+  $("demo").onchange=function(){s.demo=this.value;s.meal=null;s.prev=null;renderAll()};
+  $("ws").oninput=$("we").oninput=function(){renderRec();renderChart()};
+  document.addEventListener("click",function(e){
+    var d=e.target.dataset;
+    if(d.v!==undefined){s.v=+d.v;s.meal=null;s.prev=null;renderVenues();renderAll()}
+    if(d.meal){s.meal=d.meal;renderMenu()}
+    if(d.rep!==undefined){
+      if(!occ(hnow(),false)){toast("This place is closed right now.");return}
+      s.reps.push({t:Date.now(),v:s.v,val:+d.rep});save();renderGauge();renderChart();toast("Thanks! Your report helps others.");
+    }
+  });
+  $("alert").onchange=function(){
+    if(this.checked&&"Notification" in window&&Notification.permission==="default")Notification.requestPermission();
+    s.prev=null;if(this.checked)toast("Okay, I’ll let you know when it’s quiet.");
+  };
+  $("theme").onclick=function(){
+    var r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+    r.dataset.theme=dark?"light":"dark";
+  };
+
+  setInterval(function(){
+    s.drift=Math.max(-8,Math.min(8,s.drift*.9+(Math.random()-.5)*4));
+    renderGauge();renderChart();
+  },4000);
+  renderVenues();renderAll();
+})();
+</script>
+</body>
+</html>
